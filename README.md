@@ -16,10 +16,10 @@ nix shell github:thebrandonlucas/roc-overlay
 roc --version
 
 # Run one off commands directly from the flake.
-nix run github:thebrandonlucas/roc-overlay --version
+nix run github:thebrandonlucas/roc-overlay -- --version
 
 # For a pinned Roc release:
-nix shell 'github:OWNER/roc-nightly-overlay#nightly-2026-July-14-c9147c2'
+nix shell 'github:thebrandonlucas/roc-overlay#nightly-2026-July-14-c9147c2'
 ```
 
 
@@ -29,7 +29,7 @@ nix shell 'github:OWNER/roc-nightly-overlay#nightly-2026-July-14-c9147c2'
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    roc-nightly.url = "github:OWNER/roc-nightly-overlay";
+    roc-nightly.url = "github:thebrandonlucas/roc-overlay";
     roc-nightly.inputs.nixpkgs.follows = "nixpkgs";
   };
 
@@ -54,7 +54,7 @@ Select a historical package with `roc-nightly.packages.${system}."<release-tag>"
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    roc-nightly.url = "github:OWNER/roc-nightly-overlay";
+    roc-nightly.url = "github:thebrandonlucas/roc-overlay";
     roc-nightly.inputs.nixpkgs.follows = "nixpkgs";
   };
 
