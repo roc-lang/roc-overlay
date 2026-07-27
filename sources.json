@@ -1,5 +1,5 @@
 {
-  "latest": "nightly-2026-July-25-b6cdced",
+  "latest": "nightly-2026-July-27-f4b3c60",
   "releases": {
     "nightly-2026-July-14-c9147c2": {
       "compilerCommit": "c9147c281f29182a5c715bee4c9e095b7a812292",
@@ -280,6 +280,34 @@
         }
       },
       "tag": "nightly-2026-July-25-b6cdced"
+    },
+    "nightly-2026-July-27-f4b3c60": {
+      "compilerCommit": "f4b3c607f5b06f9d1c3d884d5fcadf539bbf2a7e",
+      "compilerVersion": "release-fast-f4b3c607",
+      "publishedAt": "2026-07-27T13:00:35Z",
+      "systems": {
+        "aarch64-darwin": {
+          "asset": "roc_nightly-macos_apple_silicon-2026-07-27-f4b3c60.tar.gz",
+          "sha256": "sha256-U77gAg0sxdue3oq94ebcb7+mtq3wGD5GxiBVRRQKyOg=",
+          "url": "https://github.com/roc-lang/nightlies/releases/download/nightly-2026-July-27-f4b3c60/roc_nightly-macos_apple_silicon-2026-07-27-f4b3c60.tar.gz"
+        },
+        "aarch64-linux": {
+          "asset": "roc_nightly-linux_arm64-2026-07-27-f4b3c60.tar.gz",
+          "sha256": "sha256-DaasR3sF3u5nCWhOrszDD7ABy4X0JKvBBQ4MazXwZOQ=",
+          "url": "https://github.com/roc-lang/nightlies/releases/download/nightly-2026-July-27-f4b3c60/roc_nightly-linux_arm64-2026-07-27-f4b3c60.tar.gz"
+        },
+        "x86_64-darwin": {
+          "asset": "roc_nightly-macos_x86_64-2026-07-27-f4b3c60.tar.gz",
+          "sha256": "sha256-JccTpF78UB6Jj5C1QiACX6UInWnQ7UTLm4MCNa30enc=",
+          "url": "https://github.com/roc-lang/nightlies/releases/download/nightly-2026-July-27-f4b3c60/roc_nightly-macos_x86_64-2026-07-27-f4b3c60.tar.gz"
+        },
+        "x86_64-linux": {
+          "asset": "roc_nightly-linux_x86_64-2026-07-27-f4b3c60.tar.gz",
+          "sha256": "sha256-5Uy8zT1CFBzKia37CY4dXGdTccaWrAS7U2pMC6ByYZQ=",
+          "url": "https://github.com/roc-lang/nightlies/releases/download/nightly-2026-July-27-f4b3c60/roc_nightly-linux_x86_64-2026-07-27-f4b3c60.tar.gz"
+        }
+      },
+      "tag": "nightly-2026-July-27-f4b3c60"
     }
   }
 }
