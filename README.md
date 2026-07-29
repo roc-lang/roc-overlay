@@ -4,6 +4,8 @@ A Nix flake for the [Roc new-compiler nightly binaries](https://github.com/roc-l
 
 This flake just mirrors prebuilt official Roc binaries; it does not build Roc from source. At present, it only provides [nightly](https://github.com/roc-lang/nightlies/releases) releases, as the [new Zig compiler](https://gist.github.com/rtfeldman/f46bcbfe5132d62c4095dfa687bb9aa4) has no stable release yet.
 
+This repo was originally created by @thebrandonlucas, thanks Brandon :heart:
+
 ## Usage
 
 ### Quickstart from shell
