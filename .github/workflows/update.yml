@@ -127,10 +127,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BASE: ${{ needs.validate.outputs.base }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ needs.validate.outputs.base }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           target=$BASE
           if [ "$target" = "$AUTOMATION_BRANCH" ]; then
-            target=${{ github.event.repository.default_branch }}
+            target=$DEFAULT_BRANCH
           fi
           if gh pr view "$AUTOMATION_BRANCH" --json state --jq '.state' 2>/dev/null | grep -q OPEN; then
             echo "Pull request already open; the push above updated it."
