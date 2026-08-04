@@ -9,7 +9,7 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "07:00"
-      timezone: "Europe/Brussels"
+      timezone: "UTC"
     commit-message:
       prefix: "chore"
 
@@ -20,6 +20,6 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "07:00"
-      timezone: "Europe/Brussels"
+      timezone: "UTC"
     commit-message:
       prefix: "chore"
