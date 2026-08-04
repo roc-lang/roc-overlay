@@ -1,40 +1,148 @@
+# Records new Roc nightly releases in sources.json and opens a pull request.
+#
+# Split into two jobs on purpose:
+#   - `validate` executes untrusted-ish code (update.sh downloads and RUNS a Roc
+#     nightly binary as part of `nix flake check`) and never holds write
+#     credentials.
+#   - `publish` holds the write token but runs no Nix and no downloaded binary.
+# Keep that separation when editing this file.
 name: Update nightly metadata
 
 on:
-  ##schedule:
-  ##  - cron: "17 */6 * * *"
+  schedule:
+    - cron: "17 */6 * * *"
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
+# Never cancel a run midway: `publish` pushes a branch and opens a PR.
 concurrency:
   group: update-nightly-metadata
-  cancel-in-progress: true
+  cancel-in-progress: false
+
+env:
+  AUTOMATION_BRANCH: automated/nightly-metadata
 
 jobs:
-  update:
+  validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      changed: ${{ steps.update.outputs.changed }}
+      base: ${{ steps.base.outputs.branch }}
     steps:
+      # If an update PR is still open, build on top of it so that unmerged
+      # releases are not dropped when the next nightly lands.
+      - name: Select base branch
+        id: base
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if gh api "repos/$GITHUB_REPOSITORY/branches/$AUTOMATION_BRANCH" >/dev/null 2>&1; then
+            echo "branch=$AUTOMATION_BRANCH" >>"$GITHUB_OUTPUT"
+          else
+            echo "branch=$DEFAULT_BRANCH" >>"$GITHUB_OUTPUT"
+          fi
+
       - name: Check out repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.base.outputs.branch }}
+          persist-credentials: false
 
       - name: Install Nix
-        uses: cachix/install-nix-action@9280e7aca88deada44c930f1e2c78e21c3ae3edd # v31.7.0
+        uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
 
+      # update.sh runs `nix fmt` and `nix flake check` itself, so a successful
+      # run here means the recorded release already built and passed the smoke
+      # test. That matters because PRs opened with GITHUB_TOKEN do not trigger
+      # workflow runs (see the `publish` job).
       - name: Update and validate metadata
+        id: update
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./update.sh
-
-      - name: Commit metadata
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          git diff --exit-code -- . ':(exclude)sources.json'
-          git add sources.json
-          if git diff --cached --quiet; then
+          ./update.sh
+          if git diff --quiet -- sources.json; then
+            echo "changed=false" >>"$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Ensure only sources.json changed
+        run: git diff --exit-code -- . ':(exclude)sources.json'
+
+      - name: Upload sources.json
+        if: steps.update.outputs.changed == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sources-json
+          path: sources.json
+          retention-days: 1
+
+  publish:
+    needs: validate
+    if: needs.validate.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.validate.outputs.base }}
+
+      - name: Download sources.json
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sources-json
+
+      # The artifact is attacker-controlled only if `validate` was compromised,
+      # but re-check anyway: nothing except sources.json may differ.
+      - name: Ensure only sources.json changed
+        run: git diff --exit-code -- . ':(exclude)sources.json'
+
+      - name: Commit and push
+        run: |
+          if git diff --quiet -- sources.json; then
+            echo "sources.json already up to date on ${{ needs.validate.outputs.base }}."
             exit 0
           fi
-          git config user.name roc-nightly-overlay
-          git config user.email roc-nightly-overlay@users.noreply.github.com
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$AUTOMATION_BRANCH"
+          git add sources.json
           git commit -m "chore: update Roc nightly metadata"
-          git push origin "HEAD:${{ github.event.repository.default_branch }}"
+          git push --force-with-lease origin "HEAD:refs/heads/$AUTOMATION_BRANCH"
+
+      # NOTE: a PR opened with GITHUB_TOKEN does not trigger the Test workflow.
+      # The `validate` job above is the gate. This step also requires
+      # "Allow GitHub Actions to create and approve pull requests" in
+      # Settings -> Actions -> General.
+      - name: Open or update pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ needs.validate.outputs.base }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          target=$BASE
+          if [ "$target" = "$AUTOMATION_BRANCH" ]; then
+            target=$DEFAULT_BRANCH
+          fi
+          if gh pr view "$AUTOMATION_BRANCH" --json state --jq '.state' 2>/dev/null | grep -q OPEN; then
+            echo "Pull request already open; the push above updated it."
+            exit 0
+          fi
+          gh pr create \
+            --base "$target" \
+            --head "$AUTOMATION_BRANCH" \
+            --title "chore: update Roc nightly metadata" \
+            --body "Automated update of \`sources.json\`.
+
+          \`update.sh\` validated the release before this PR was opened: immutable release, all four platform assets, tag/commit consistency, SHA-256 digests, \`nix fmt --check\`, and \`nix flake check\` (which builds Roc and runs the smoke test).
+
+          Note: CI does not re-run on this PR because it was opened with \`GITHUB_TOKEN\`."

@@ -1,0 +1,25 @@
+version: 2
+updates:
+  # The workflows pin actions by commit SHA, which is the right call for a repo
+  # that publishes compiler binaries, but it means nothing updates them without
+  # a manual bump. Dependabot rewrites the SHA and the trailing version comment.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "UTC"
+    commit-message:
+      prefix: "chore"
+
+  # flake.lock: nixpkgs and the pinned Darwin branch used for x86_64-darwin.
+  - package-ecosystem: "nix"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "UTC"
+    commit-message:
+      prefix: "chore"

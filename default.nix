@@ -136,9 +136,6 @@
       };
     };
 
-  # what does mapAttrs do? what does filterAttrs do?
-
-  # what does this fn do?
   # 1. Removes releases unavailable for system via filterAttrs
   # 2. Converts every remaining release into a Roc package via mkRoc
   # 3. Preserves release tags as package names
@@ -155,7 +152,6 @@
   nightly = releasePackages.${sources.latest};
 in
   releasePackages
-  # explain the // syntax
   // {
     inherit nightly;
     # default and nightly are the same currently because the new

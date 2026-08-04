@@ -52,8 +52,16 @@ fetch_api() {
 #   that may have been skipped over or missed by cron or one
 #   in the past before this existed), then use that release url
 # - else just get the latest nightly release
+tag_regex='^nightly-([0-9]{4})-([A-Za-z]+)-([0-9]{2})-([0-9a-f]{7,40})$'
+
 if [[ $# -eq 1 ]]; then
   requested_tag=$1
+  # Validate before the tag ever reaches a URL; curl collapses `..` path
+  # segments, so an unchecked argument could redirect the query elsewhere.
+  [[ "$requested_tag" =~ $tag_regex ]] || {
+    echo "error: invalid release tag: $requested_tag" >&2
+    exit 1
+  }
   release_url="https://api.github.com/repos/roc-lang/nightlies/releases/tags/$requested_tag"
 else
   requested_tag=""
@@ -75,16 +83,18 @@ tag=$(jq -er '.tag_name' "$release_json")
 }
 
 # Match the tag against expected regex or fail.
-if [[ ! "$tag" =~ ^nightly-([0-9]{4})-([A-Za-z]+)-([0-9]{2})-([0-9a-f]{7,40})$ ]]; then
+if [[ ! "$tag" =~ $tag_regex ]]; then
   echo "error: unexpected release tag: $tag" >&2
   exit 1
 fi
-# what is BASH_REMATCH?
+
 year=${BASH_REMATCH[1]}
 month=${BASH_REMATCH[2]}
 day=${BASH_REMATCH[3]}
 short_commit=${BASH_REMATCH[4]}
-release_date=$(date --date="$month $day $year" +%Y-%m-%d)
+# LC_ALL=C so the English month name from the tag parses regardless of the
+# locale configured on the machine running this script.
+release_date=$(LC_ALL=C date --date="$month $day $year" +%Y-%m-%d)
 
 # Refuse mutable releases since they're non-reproducible.
 [[ $(jq -er '.immutable' "$release_json") == true ]] || {
@@ -152,7 +162,26 @@ compiler_commit=$(jq -er '.sha' "$commit_json")
   echo "error: tag commit '$short_commit' resolved to '$compiler_commit'" >&2
   exit 1
 }
-compiler_version="release-fast-${compiler_commit:0:8}"
+# What `roc version` prints changed upstream. roc-lang/nightlies commit afe85e78
+# ("use new version string", 2026-07-31T18:15:11Z) started passing
+# `-Dcompiler-version=<tag>` to `zig build build-release`, so from then on the
+# binary reports the release tag. Before it, the version was derived from the
+# build profile and the commit: `release-fast-<first 8 of sha>`.
+#
+# Verified against the two releases either side of that commit:
+#   nightly-2026-July-31-f5556d8  -> release-fast-f5556d8c
+#   nightly-2026-August-01-1c1cecc -> nightly-2026-August-01-1c1cecc
+#
+# The cutoff is kept so that backfilling an older tag by hand
+# (`./update.sh nightly-2026-July-14-c9147c2`) still records the version that
+# release actually reports. Both timestamps are ISO-8601 UTC, so a string
+# comparison orders them correctly.
+version_scheme_cutoff="2026-07-31T18:15:11Z"
+if [[ "$published_at" > "$version_scheme_cutoff" ]]; then
+  compiler_version="$tag"
+else
+  compiler_version="release-fast-${compiler_commit:0:8}"
+fi
 
 # Construct mapping for which OS and arch each archive supports.
 systems_json="$tmpdir/systems.json"
@@ -172,25 +201,85 @@ jq -n \
     systems: $systems[0]
   }' >"$entry_json"
 
+# Retention. Every recorded nightly is kept by default, which is what
+# oxalica/rust-overlay does: they carry every nightly since 2025 and prune
+# nothing, because old nightlies are what you need to bisect a compiler
+# regression. At roughly 1.6 KB per release, a year of dailies is ~600 KB and
+# three years ~1.8 MB, so there is no size pressure to act on yet.
+#
+# If evaluation ever does get slow, deleting history is the wrong first move.
+# The real inefficiency is that default.nix does
+# `builtins.fromJSON (builtins.readFile ./sources.json)`, which parses every
+# release on every evaluation even when only `nightly` is referenced.
+# rust-overlay avoids that by giving each release its own file behind a lazy
+# `import`, so evaluation costs only what you actually reference. Splitting
+# sources.json that way preserves history; pruning does not.
+#
+# Pruning is therefore opt-in. Set ROC_OVERLAY_KEEP_RECENT=<n> to keep only the
+# newest n releases, plus the newest release of every calendar month, plus
+# whatever .latest points at. Note that dropping an entry does not break a
+# consumer who pinned it: their flake.lock pins a commit of *this* overlay, and
+# that commit still records the release. Only
+# `nix shell 'github:roc-lang/roc-overlay#<pruned-tag>'` against the default
+# branch stops resolving.
+keep_recent=${ROC_OVERLAY_KEEP_RECENT:-0}
+
 if jq -e --arg tag "$tag" '.releases | has($tag)' sources.json >/dev/null; then
+  already_recorded=1
+else
+  already_recorded=0
+fi
+
+# Add the release if it is new and move .latest forward if this release is newer
+# than the current one. Prune only when retention is switched on.
+jq -S \
+  --arg tag "$tag" \
+  --argjson keepRecent "$keep_recent" \
+  --slurpfile entry "$entry_json" \
+  '
+    (
+      .releases[$tag] //= $entry[0]
+      | if $entry[0].publishedAt > .releases[.latest].publishedAt
+        then .latest = $tag
+        else .
+        end
+    )
+    | if $keepRecent <= 0 then . else
+        . as $root
+        | (.releases | to_entries | sort_by(.value.publishedAt)) as $sorted
+        | (
+            # newest $keepRecent by publish time
+            ($sorted | .[(if length > $keepRecent then length - $keepRecent else 0 end):])
+            # plus the newest release within each YYYY-MM bucket
+            + ($sorted | group_by(.value.publishedAt[0:7]) | map(max_by(.value.publishedAt)))
+            | map(.key)
+          ) as $keep
+        | .releases |= with_entries(
+            . as $e
+            | select($e.key == $root.latest or ($keep | index($e.key)) != null)
+          )
+      end
+  ' \
+  sources.json >"$tmpdir/sources.json"
+
+# Nothing to do when the release was already recorded and nothing was pruned.
+if cmp -s "$tmpdir/sources.json" sources.json; then
   echo "$tag is already recorded; no changes."
   exit 0
 fi
 
-jq -S \
-  --arg tag "$tag" \
-  --slurpfile entry "$entry_json" \
-  '
-    .releases[$tag] = $entry[0]
-    | if $entry[0].publishedAt > .releases[.latest].publishedAt
-      then .latest = $tag
-      else .
-      end
-  ' \
-  sources.json >"$tmpdir/sources.json"
+pruned=$(jq -r --slurpfile new "$tmpdir/sources.json" '
+  (.releases | keys) - ($new[0].releases | keys) | join(", ")
+' sources.json)
+
 mv "$tmpdir/sources.json" sources.json
 
 nix fmt
 nix flake check
 
-echo "Recorded $tag."
+if [[ "$already_recorded" -eq 1 ]]; then
+  echo "$tag was already recorded; applied retention policy only."
+else
+  echo "Recorded $tag."
+fi
+[[ -z "$pruned" ]] || echo "Pruned by ROC_OVERLAY_KEEP_RECENT=$keep_recent: $pruned"

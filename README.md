@@ -1,8 +1,10 @@
-# Nix Flake for Nightly Roc
+# roc-overlay
 
 A Nix flake for the [Roc new-compiler nightly binaries](https://github.com/roc-lang/nightlies/releases). Inspired by [Mitchell Hashimoto's](https://mitchellh.com/) [zig-overlay](https://github.com/mitchellh/zig-overlay).
 
 This flake just mirrors prebuilt official Roc binaries; it does not build Roc from source. At present, it only provides [nightly](https://github.com/roc-lang/nightlies/releases) releases, as the [new Zig compiler](https://gist.github.com/rtfeldman/f46bcbfe5132d62c4095dfa687bb9aa4) has no stable release yet.
+
+Not using Nix? [`roc-lang/setup-roc`](https://github.com/roc-lang/setup-roc) is the official GitHub Action for installing Roc on CI, and it also covers Windows.
 
 This repo was originally created by @thebrandonlucas, thanks Brandon :heart:
 
@@ -14,14 +16,14 @@ This repo was originally created by @thebrandonlucas, thanks Brandon :heart:
 # To get the latest nightly:
 
 # Create a shell with the compiler.
-nix shell github:thebrandonlucas/roc-overlay
-roc --version
+nix shell github:roc-lang/roc-overlay
+roc version
 
 # Run one off commands directly from the flake.
-nix run github:thebrandonlucas/roc-overlay -- --version
+nix run github:roc-lang/roc-overlay -- version
 
 # For a pinned Roc release:
-nix shell 'github:thebrandonlucas/roc-overlay#nightly-2026-July-14-c9147c2'
+nix shell 'github:roc-lang/roc-overlay#nightly-2026-July-14-c9147c2'
 ```
 
 
@@ -31,24 +33,24 @@ nix shell 'github:thebrandonlucas/roc-overlay#nightly-2026-July-14-c9147c2'
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    roc-nightly.url = "github:thebrandonlucas/roc-overlay";
-    roc-nightly.inputs.nixpkgs.follows = "nixpkgs";
+    roc-overlay.url = "github:roc-lang/roc-overlay";
+    roc-overlay.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = {nixpkgs, roc-nightly, ...}: let
+  outputs = {nixpkgs, roc-overlay, ...}: let
     system = "x86_64-linux";
     pkgs = nixpkgs.legacyPackages.${system};
   in {
     devShells.${system}.default = pkgs.mkShell {
       packages = [
-        roc-nightly.packages.${system}.nightly
+        roc-overlay.packages.${system}.nightly
       ];
     };
   };
 }
 ```
 
-Select a historical package with `roc-nightly.packages.${system}."<release-tag>"`.
+Select a historical package with `roc-overlay.packages.${system}."<release-tag>"`.
 
 ### As an overlay
 
@@ -56,15 +58,15 @@ Select a historical package with `roc-nightly.packages.${system}."<release-tag>"
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    roc-nightly.url = "github:thebrandonlucas/roc-overlay";
-    roc-nightly.inputs.nixpkgs.follows = "nixpkgs";
+    roc-overlay.url = "github:roc-lang/roc-overlay";
+    roc-overlay.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = {nixpkgs, roc-nightly, ...}: let
+  outputs = {nixpkgs, roc-overlay, ...}: let
     system = "x86_64-linux";
     pkgs = import nixpkgs {
       inherit system;
-      overlays = [roc-nightly.overlays.default];
+      overlays = [roc-overlay.overlays.default];
     };
   in {
     devShells.${system}.default = pkgs.mkShell {
@@ -81,7 +83,7 @@ Select a historical package with `roc-nightly.packages.${system}."<release-tag>"
 The consumer's `flake.lock` pins the selected overlay commit, so Roc updates are explicit:
 
 ```sh
-nix flake update roc-nightly
+nix flake update roc-overlay
 ```
 
 ## Supported systems
@@ -95,8 +97,8 @@ Intel macOS packages use the last compatible Nixpkgs Darwin release branch (Nixp
 
 `default` and `nightly` point to the newest release in `sources.json`. Every recorded release also remains available under its complete release tag.
 
-On Linux, `roc` is wrapped with Nix's C toolchain and core utilities so it can locate libc in Nix-managed environments, especially NixOS. Ordinary platform apps and `roc version` alone do not expose that requirement. On macOS, the package installs Roc's bundled minimal Darwin sysroot next to the executable.
 
+On Linux, `roc` is wrapped with Nix's C toolchain and core utilities so it can locate libc in Nix-managed environments, especially NixOS. Ordinary platform apps and `roc version` alone do not expose that requirement. On macOS, the package installs Roc's bundled minimal Darwin sysroot next to the executable.
 
 
 ## Updating `sources.json`

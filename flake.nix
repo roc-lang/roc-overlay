@@ -41,7 +41,6 @@
     pkgsFor = eachSystem (
       system:
         if system == "x86_64-darwin"
-        # what is legacyPackages?
         then nixpkgs-darwin.legacyPackages.${system}
         else nixpkgs.legacyPackages.${system}
     );
@@ -86,7 +85,7 @@
     formatter =
       lib.mapAttrs (
         _: pkgs:
-          pkgs.writeShellScriptBin "roc-nightly-overlay-fmt" ''
+          pkgs.writeShellScriptBin "roc-overlay-fmt" ''
             exec ${lib.getExe pkgs.alejandra} "$@" .
           ''
       )

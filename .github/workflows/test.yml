@@ -1,14 +1,23 @@
+# SECURITY: This workflow runs untrusted code from outside contribution (fork) PRs (update.sh, flake evaluation).
+# Never add secrets or write permissions here. If a secret is ever needed
+# (e.g. a Cachix push token), put it in a separate workflow triggered only
+# on `push` to master, after the code is trusted.
 name: Test
 
+# `push` is limited to the default branch so that a branch with an open PR does
+# not run the suite twice. Post-merge runs on master matter: the automated
+# metadata PR is opened with GITHUB_TOKEN and therefore never triggers CI
+# itself, so this is where merged updates get verified in place.
 on:
   push:
+    branches: [master]
   pull_request:
 
 permissions:
   contents: read
 
 concurrency:
-  group: test-${{ github.workflow }}-${{ github.ref }}
+  group: test-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -17,10 +26,12 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Check out repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install Nix
-        uses: cachix/install-nix-action@9280e7aca88deada44c930f1e2c78e21c3ae3edd # v31.7.0
+        uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
 
       - name: Check formatting
         run: nix fmt -- --check
@@ -28,7 +39,7 @@ jobs:
       - name: Evaluate all systems
         run: nix flake check --all-systems --no-build
 
-      - name: Check native system
+      - name: Check on native system
         run: nix flake check
 
       - name: Run Roc
