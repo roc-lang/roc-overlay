@@ -162,7 +162,26 @@ compiler_commit=$(jq -er '.sha' "$commit_json")
   echo "error: tag commit '$short_commit' resolved to '$compiler_commit'" >&2
   exit 1
 }
-compiler_version="release-fast-${compiler_commit:0:8}"
+# What `roc version` prints changed upstream. roc-lang/nightlies commit afe85e78
+# ("use new version string", 2026-07-31T18:15:11Z) started passing
+# `-Dcompiler-version=<tag>` to `zig build build-release`, so from then on the
+# binary reports the release tag. Before it, the version was derived from the
+# build profile and the commit: `release-fast-<first 8 of sha>`.
+#
+# Verified against the two releases either side of that commit:
+#   nightly-2026-July-31-f5556d8  -> release-fast-f5556d8c
+#   nightly-2026-August-01-1c1cecc -> nightly-2026-August-01-1c1cecc
+#
+# The cutoff is kept so that backfilling an older tag by hand
+# (`./update.sh nightly-2026-July-14-c9147c2`) still records the version that
+# release actually reports. Both timestamps are ISO-8601 UTC, so a string
+# comparison orders them correctly.
+version_scheme_cutoff="2026-07-31T18:15:11Z"
+if [[ "$published_at" > "$version_scheme_cutoff" ]]; then
+  compiler_version="$tag"
+else
+  compiler_version="release-fast-${compiler_commit:0:8}"
+fi
 
 # Construct mapping for which OS and arch each archive supports.
 systems_json="$tmpdir/systems.json"
