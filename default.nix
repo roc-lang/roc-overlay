@@ -152,7 +152,6 @@
   nightly = releasePackages.${sources.latest};
 in
   releasePackages
-
   // {
     inherit nightly;
     # default and nightly are the same currently because the new

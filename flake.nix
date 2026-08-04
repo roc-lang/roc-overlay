@@ -41,7 +41,6 @@
     pkgsFor = eachSystem (
       system:
         if system == "x86_64-darwin"
-
         then nixpkgs-darwin.legacyPackages.${system}
         else nixpkgs.legacyPackages.${system}
     );
