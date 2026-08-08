@@ -52,7 +52,13 @@ fetch_api() {
 #   that may have been skipped over or missed by cron or one
 #   in the past before this existed), then use that release url
 # - else just get the latest nightly release
-tag_regex='^nightly-([0-9]{4})-([A-Za-z]+)-([0-9]{2})-([0-9a-f]{7,40})$'
+#
+# Two tag formats exist upstream. Releases up to
+# nightly-2026-August-05-24f0b47 spell the month out in English
+# ("nightly-2026-July-14-c9147c2"); from nightly-2026-08-06-61bbb59 onwards the
+# month is a two-digit number ("nightly-2026-08-07-8d23662"). Both are accepted
+# so that older tags can still be backfilled by hand.
+tag_regex='^nightly-([0-9]{4})-([A-Za-z]+|[0-9]{2})-([0-9]{2})-([0-9a-f]{7,40})$'
 
 if [[ $# -eq 1 ]]; then
   requested_tag=$1
@@ -92,9 +98,15 @@ year=${BASH_REMATCH[1]}
 month=${BASH_REMATCH[2]}
 day=${BASH_REMATCH[3]}
 short_commit=${BASH_REMATCH[4]}
-# LC_ALL=C so the English month name from the tag parses regardless of the
-# locale configured on the machine running this script.
-release_date=$(LC_ALL=C date --date="$month $day $year" +%Y-%m-%d)
+# Asset names always use the numeric date, so a spelled-out month has to be
+# converted. LC_ALL=C so the English month name from the tag parses regardless
+# of the locale configured on the machine running this script. Both branches go
+# through `date`, which rejects an impossible date such as 2026-13-40.
+if [[ "$month" =~ ^[0-9]{2}$ ]]; then
+  release_date=$(LC_ALL=C date --date="$year-$month-$day" +%Y-%m-%d)
+else
+  release_date=$(LC_ALL=C date --date="$month $day $year" +%Y-%m-%d)
+fi
 
 # Refuse mutable releases since they're non-reproducible.
 [[ $(jq -er '.immutable' "$release_json") == true ]] || {

@@ -23,8 +23,10 @@ roc version
 nix run github:roc-lang/roc-overlay -- version
 
 # For a pinned Roc release:
-nix shell 'github:roc-lang/roc-overlay#nightly-2026-July-14-c9147c2'
+nix shell 'github:roc-lang/roc-overlay#nightly-2026-08-07-8d23662'
 ```
+
+Release tags up to `nightly-2026-August-05-24f0b47` spell the month out in English; from `nightly-2026-08-06-61bbb59` onwards they use a two-digit month. Both forms are recorded and can be selected as shown above.
 
 
 ### As a package in your own flake.nix
@@ -105,6 +107,7 @@ On Linux, `roc` is wrapped with Nix's C toolchain and core utilities so it can l
 
 ```sh
 ./update.sh
+./update.sh nightly-2026-08-07-8d23662
 ./update.sh nightly-2026-July-14-c9147c2
 ```
 
