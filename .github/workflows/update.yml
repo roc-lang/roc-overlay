@@ -34,13 +34,29 @@ jobs:
     steps:
       # If an update PR is still open, build on top of it so that unmerged
       # releases are not dropped when the next nightly lands.
+      #
+      # Gate on an OPEN PR, not on the branch existing. GitHub keeps a merged
+      # PR's branch around unless auto-delete is enabled, and this job checks
+      # out update.sh from whatever it picks here. A merged-but-undeleted
+      # automation branch therefore pins the updater to the code it had when it
+      # was merged: after roc-lang/nightlies switched to numeric-month tags,
+      # every scheduled run kept failing with "unexpected release tag" against
+      # a stale regex while the fix sat on master, unused.
+      #
+      # `gh pr list` needs --repo because this step runs before the checkout,
+      # so there is no local repository to infer it from.
       - name: Select base branch
         id: base
         env:
           GH_TOKEN: ${{ github.token }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          if gh api "repos/$GITHUB_REPOSITORY/branches/$AUTOMATION_BRANCH" >/dev/null 2>&1; then
+          open_prs=$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --head "$AUTOMATION_BRANCH" \
+            --state open \
+            --json number --jq 'length')
+          if [ "$open_prs" -gt 0 ]; then
             echo "branch=$AUTOMATION_BRANCH" >>"$GITHUB_OUTPUT"
           else
             echo "branch=$DEFAULT_BRANCH" >>"$GITHUB_OUTPUT"
