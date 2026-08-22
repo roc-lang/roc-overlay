@@ -133,6 +133,15 @@ jobs:
           git checkout -B "$AUTOMATION_BRANCH"
           git add sources.json
           git commit -m "chore: update Roc nightly metadata"
+          # --force-with-lease needs a remote-tracking ref to compare against.
+          # When the base is master (no open automation PR) the checkout above
+          # fetched only master, so that ref is missing while the branch itself
+          # may still exist remotely -- a merged-but-undeleted branch is enough.
+          # Git then refuses the push with "stale info". Fetch the branch so the
+          # lease has something to check; `|| true` covers the branch genuinely
+          # not existing, where the push is a plain create.
+          git fetch --no-tags --depth=1 origin \
+            "+refs/heads/$AUTOMATION_BRANCH:refs/remotes/origin/$AUTOMATION_BRANCH" || true
           git push --force-with-lease origin "HEAD:refs/heads/$AUTOMATION_BRANCH"
 
       # NOTE: a PR opened with GITHUB_TOKEN does not trigger the Test workflow.
