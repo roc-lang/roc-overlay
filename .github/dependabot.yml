@@ -14,11 +14,15 @@ updates:
       prefix: "chore"
 
   # flake.lock: nixpkgs and the pinned Darwin branch used for x86_64-darwin.
+  # Monthly on purpose: nothing this flake takes from nixpkgs (stdenv, fetchurl,
+  # makeWrapper, coreutils/cc for the Linux wrapper, alejandra) is version
+  # sensitive -- Roc ships as a prebuilt binary -- and consumers are told to
+  # `follows` their own nixpkgs anyway. Weekly bumps were churn: a full build and
+  # smoke test per PR, and a shifted runtime closure for `nix run` users.
   - package-ecosystem: "nix"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "monthly"
       time: "07:00"
       timezone: "UTC"
     commit-message:
