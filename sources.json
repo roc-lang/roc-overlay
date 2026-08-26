@@ -1,5 +1,5 @@
 {
-  "latest": "nightly-2026-08-25-cc03aa8",
+  "latest": "nightly-2026-08-26-b29bef3",
   "releases": {
     "nightly-2026-08-06-61bbb59": {
       "compilerCommit": "61bbb59bd8d852c35f3efdb32b44a04fc95d48ab",
@@ -448,6 +448,34 @@
         }
       },
       "tag": "nightly-2026-08-25-cc03aa8"
+    },
+    "nightly-2026-08-26-b29bef3": {
+      "compilerCommit": "b29bef3c72ce228ce06f9d61df859f60e8c2f626",
+      "compilerVersion": "nightly-2026-08-26-b29bef3",
+      "publishedAt": "2026-08-26T10:31:49Z",
+      "systems": {
+        "aarch64-darwin": {
+          "asset": "roc_nightly-macos_apple_silicon-2026-08-26-b29bef3.tar.gz",
+          "sha256": "sha256-ccLm50Mr4Jpa0i29C/iA1RfVETxUL+OhkCwbgctXFwM=",
+          "url": "https://github.com/roc-lang/nightlies/releases/download/nightly-2026-08-26-b29bef3/roc_nightly-macos_apple_silicon-2026-08-26-b29bef3.tar.gz"
+        },
+        "aarch64-linux": {
+          "asset": "roc_nightly-linux_arm64-2026-08-26-b29bef3.tar.gz",
+          "sha256": "sha256-H2WvPytE9MCYJ6z0QuUfeVx2WGhf7O1XvIk5OgMf4Yw=",
+          "url": "https://github.com/roc-lang/nightlies/releases/download/nightly-2026-08-26-b29bef3/roc_nightly-linux_arm64-2026-08-26-b29bef3.tar.gz"
+        },
+        "x86_64-darwin": {
+          "asset": "roc_nightly-macos_x86_64-2026-08-26-b29bef3.tar.gz",
+          "sha256": "sha256-aGB+/Dwa8b7gaXYoap+XkGBlBb+Mcv614tilYaTGYNk=",
+          "url": "https://github.com/roc-lang/nightlies/releases/download/nightly-2026-08-26-b29bef3/roc_nightly-macos_x86_64-2026-08-26-b29bef3.tar.gz"
+        },
+        "x86_64-linux": {
+          "asset": "roc_nightly-linux_x86_64-2026-08-26-b29bef3.tar.gz",
+          "sha256": "sha256-5ovsE+I7KH5HJTtC2KdXYbgGA5v97kYPacAYcuR++EY=",
+          "url": "https://github.com/roc-lang/nightlies/releases/download/nightly-2026-08-26-b29bef3/roc_nightly-linux_x86_64-2026-08-26-b29bef3.tar.gz"
+        }
+      },
+      "tag": "nightly-2026-08-26-b29bef3"
     },
     "nightly-2026-August-01-1c1cecc": {
       "compilerCommit": "1c1ceccf672248bcd367cf3b21f4daadc0afd318",
