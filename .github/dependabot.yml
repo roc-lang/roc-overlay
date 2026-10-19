@@ -10,6 +10,8 @@ updates:
       day: "monday"
       time: "07:00"
       timezone: "UTC"
+    cooldown:
+      default-days: 14
     commit-message:
       prefix: "chore"
 
@@ -25,5 +27,7 @@ updates:
       interval: "monthly"
       time: "07:00"
       timezone: "UTC"
+    cooldown:
+      default-days: 14
     commit-message:
       prefix: "chore"
